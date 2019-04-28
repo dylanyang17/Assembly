@@ -116,9 +116,85 @@ endMergeLoop2:
 	b     endMergeLoop1 #break
 endMergeIf1:
 	move  $t3, $t1     #t3作为p_right_temp
+mergeLoop3:
+	lw    $t9, 4($t3)  #t9=p_right_temp->next
+	bez   $t9, endMergeLoop3
+	lw    $t9, 0($t9)  #t9=t9->val
+	lw    $t8, 4($t0)  #t8=p_left->next
+	lw    $t8, 0($t8)  #t8=t8->val
+	bgt   $t9, $t8, endMergeLoop3
+	lw    $t3, 4($t3)  #p_right_temp=p_right_temp->next
+	b     mergeLoop3
+endMergeLoop3:
+	lw    $t4, 4($t3)  #t4作为temp_right_pointer_next
+	lw    $t9, 4($t0)  #t9=p_left->next
+	sw    $t9, 4($t3)  #p_right_temp->next=p_left->next
+	sw    $t1, 4($t0)  #p_left->next=p_right
+	move  $t0, $t3     #p_left=p_right_temp
+	move  $t1, $t4     #p_right=temp_right_pointer_next
+	bez   $t1, endMergeLoop1  # if(p_right==NULL) break;
+	b     mergeLoop1
 endMergeLoop1:
-	
-	
+	lw    $v0, 4($t2)  #return head->next
+	jr    $ra
+
+
+sort: #传入a0表示首指针head，传回v0表示排序后的首指针
+	move  $t0, $a0     #t0作为head
+	lw    $t9, 4($t0)  #t9=head->next
+	bnez  $t9, endSortIf1
+	move  $v0, $a0
+	jr    $ra		   #return head;
+endSortIf1:
+	move  $t1, $t0     #t1作为stride_1_pointer
+	move  $t2, $t0     #t2作为stride_2_pointer
+sortLoop1:
+	lw    $t9, 4($t2)  #t9=stride_2_pointer->next
+	bez   $t9, endSortLoop1
+	move  $t2, $t9     #stride_2_pointer=t9
+	lw    $t9, 4($t2)  #t9=stride_2_pointer->next
+	bez   $t9, endSortLoop1
+	move  $t2, $t9     #stride_2_pointer=t9
+	lw    $t1, 4($t1)  #stride_1_pointer=stride_1_pointer->next
+	b     sortLoop1
+endSortLoop1:
+	lw    $t2, 4($t1)  #stride_2_pointer=stride_1_pointer->next
+	sw    $0,  4($t1)  #stride_1_pointer->next=NULL
+
+	move  $a0, $t0
+	subi  $sp, $sp, 16
+	sw    $t0, 0($sp)
+	sw    $t1, 4($sp)
+	sw    $t2, 8($sp)
+	sw    $ra, 12($sp)
+	jal   sort
+	lw    $ra, 12($sp)
+	lw    $t2, 8($sp)
+	lw    $t1, 4($sp)
+	lw    $t0, 0($sp)
+	addiu $sp, $sp, 16
+	move  $t3, $v0     #t3作为l_head=msort(head);
+
+	move  $a0, $t0
+	subi  $sp, $sp, 20
+	sw    $t0, 0($sp)
+	sw    $t1, 4($sp)
+	sw    $t2, 8($sp)
+	sw    $t3, 12($sp)
+	sw    $ra, 16($sp)
+	jal   sort
+	lw    $ra, 16($sp)
+	lw    $t3, 12($sp)
+	lw    $t2, 8($sp)
+	lw    $t1, 4($sp)
+	lw    $t0, 0($sp)
+	addiu $sp, $sp, 20
+	move  $t4, $v0     #t4作为r_head=msort(stride_2_pointer);
+
+	move  $a0, $t3
+	move  $a1, $t4
+	jal   merge
+	jr    $ra          #return merge(l_head,r_head);
 
 
 printListToScreen:         # a0传入链表首地址
