@@ -25,6 +25,8 @@ main:
 	la	  $a1, Arr
 	sll   $a2, $s1, 2
 	syscall			   #读取数组
+	li    $v0, 16  
+	syscall			   #关闭文件
 
 	la	  $a0, Arr
 	move  $a1, $s1
@@ -48,6 +50,9 @@ main:
 	la	  $a1, Arr
 	sll   $a2, $s1, 2
 	syscall
+	li    $v0, 16  
+	syscall			   #关闭文件
+
 	li    $v0, 10
 	syscall		       # exit
 
