@@ -61,7 +61,6 @@ endInputLoop:
 	li    $v0, 16  
 	syscall			   #关闭文件
 
-
 	move  $a0, $s3
 	jal   printListToScreen  #调试
 
@@ -91,6 +90,36 @@ outputLoop:
 
 	li    $v0, 10
 	syscall		       # exit
+
+
+merge: # a0传入左链表首地址l_head，a1传入右链表首地址r_head，v0传出合并后链表首地址
+	li    $v0, 9
+	li    $a0, 8
+	syscall			   #新建一个虚拟结点head
+	sw    $a0, 4($v0)  #next指针初始为l_head
+	move  $t0, $v0     #t0作为p_left
+	move  $t1, $a1     #t1作为p_right
+	move  $t2, $v0     #t2作为head
+mergeLoop1:
+mergeLoop2:
+	lw    $t9, 4($t0)  #t9=p_left->next
+	bez   $t9, endMergeLoop2
+	lw    $t9, 0($t9)  #t9=t9->val
+	lw    $t8, 0($t1)  #t8=p_right->val
+	bgt   $t9, $t8, endMergeLoop2
+	lw    $t0, 4($t0)  #p_left=p_left->next
+	b     mergeLoop2
+endMergeLoop2:
+	lw    $t9, 4($t0)  #t9=p_left->next
+	bnez  $t9, endMergeIf1
+	sw    $t1, 4($t0)  #p_left->next=p_right
+	b     endMergeLoop1 #break
+endMergeIf1:
+	move  $t3, $t1     #t3作为p_right_temp
+endMergeLoop1:
+	
+	
+
 
 printListToScreen:         # a0传入链表首地址
 	addu  $t6, $0, $a0     # t6存当前地址
