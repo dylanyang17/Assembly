@@ -31,7 +31,10 @@ int main(int argc, char *argv[]){
 		cout << "#" << i << ":" << '\n' ;
 		//生成数据
 		input  = fopen(inputName, "wb") ;
-		int n=rd(1,3) ;
+		int n , T=3 ;
+		if(T==1) n=rd(1,1000) ;
+		else if(T==2) n=rd(1,3) ;
+		else if(T==3) n=1000 ;
 		writeInt(n, input) ;
 		for(int i=1;i<=n;++i){
 			A[i]=rd(-10000,10000) ;

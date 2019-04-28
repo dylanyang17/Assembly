@@ -32,9 +32,12 @@ main:
 	move  $a1, $s1
 	jal   printArrToScreen  #调试
 
+	li    $s7, 1
+	beq   $s7, $s1, skipSort  #特殊处理n=1的情况
 	la    $a0, Arr
 	move  $a1, $s1
 	jal   sort         #排序
+skipSort:
 
 	la	  $a0, Arr
 	move  $a1, $s1

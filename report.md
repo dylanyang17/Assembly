@@ -23,11 +23,11 @@
 
 ## 测试
 
-三份代码全部在本地测试超过100组大数据，以及30组小数据，基本可以保证没有问题。
+**三份代码全部在本地测试超过50组大数据(包括n=1000的极限数据)，以及30组小数据(包括n=1的极限数据)，基本可以保证没有问题**。
 
 ### 程序内部的调试代码
 
-首先是在三个程序内部写了调试代码，会在命令行输出排序前和排序后的数组。
+首先是在三个程序内部写了调试代码，会在命令行输出排序前和排序后的数组。其中冒泡排序和快速排序用的函数为printArrToScreen，输出数组；归并排序用的函数为printListToScreen，用于遍历并输出链表中的数据。两个函数都会以空格作为分隔输出，且末尾带有换行。
 
 ### view.cpp
 
@@ -101,13 +101,42 @@ view.cpp，用于显示二进制文件（while不停读取4bytes直到文件结�
 
 #### 主函数
 
-主函数做的
+主函数做的工作即通过不停读入，建立初始的链表，在输出调试信息后调用sort函数获得排序之后的链表，再次输出调试信息后写回文件并结束程序。
 
-## 问题总结
+#### sort函数
+
+参数：传入$a0表示链表首指针，传回$v0表示排序后的首指针。
+
+内容：首先通过小步大步同时走的算法，找到链表中间位置，然后从这里断开链表，在分别递归左右链表之后，通过merge函数将两个有序链表进行合并。
+
+#### merge函数
+
+参数：$a0传入左链表首地址l\_head，$a1传入右链表首地址r\_head，$v0传出合并后链表首地址。
+
+内容：通过在左链表中不断找到右链表的各部分应当插入的位置，进行插入实现。
+
+#### printListToScreen函数
+
+参数：$a0传入链表首地址。
+
+内容：通过遍历该链表，将其中的数据以空格分隔的形式输出到屏幕，并且最后加上换行符。
+
+## 问题总结与思考
+
+### 调试问题
 
 * **调试时回转到上一步可能会出问题**，例如文件打开时，回转到syscall之前再向下运行则会出现打开失败的情况。
 * 在Linux系统下，文件打开时 "./a.in" 似乎不行，改成绝对路径即可运行；而在Windows系统下，测试中使用"a.in"可以。
 * 开数组的时候，在.data下使用类似 `Arr:     .space  4050`，但要注意**数组要开在其它东西前面否则会出错**，具体原因暂不清楚。
+* 注意jal时一定要记得保存ra，而不只是t0~t9等。
+
+### 思考
+
+本次实验中出现了一个小问题——快排比冒泡排序慢。
+
+经过思考以及先验知识，我认为问题应当出在lw和sw上，我所写的快排代码中，因为需要递归，故大量含有lw和sw，而这两个指令是非常慢的。
+
+但是那么为什么用C++写快排的时候就不会这么慢呢？ 我认为这是因为编译器在此做了一些优化，避免了lw和sw的频繁使用。
 
 ## 附：代码
 
@@ -219,74 +248,77 @@ int main(int argc, char *argv[]){
 
 ```
 .data
-Arr:     .space 4050
-space:   .asciiz " "
-line:    .asciiz "\n"
-infile:  .asciiz "/home/yyr/Work/asm/a.in"
-outfile: .asciiz "/home/yyr/Work/asm/a.out"
+	Arr:     .space 4050
+	space:   .asciiz " "
+	line:    .asciiz "\n"
+	infile:  .asciiz "/home/yyr/Work/asm/a.in"
+	outfile: .asciiz "/home/yyr/Work/asm/a.out"
 
 .text
 .global main
 
 main:   
-li    $v0, 13
-la    $a0, infile
-li	  $a1, 0       #读取
-li	  $a2, 0       #模式，设定为0即可
-syscall
-addu  $a0, $0, $v0
-li    $v0, 14
-la	  $a1, Arr
-li    $a2, 4       #读取四个字节，为n
-syscall
-la    $a1, Arr
-lw    $s1, 0($a1)  #s1=n
-li    $v0, 14
-la	  $a1, Arr
-sll   $a2, $s1, 2
-syscall			   #读取数组
-li    $v0, 16  
-syscall			   #关闭文件
+	li    $v0, 13
+	la    $a0, infile
+	li	  $a1, 0       #读取
+	li	  $a2, 0       #模式，设定为0即可
+	syscall
+	addu  $a0, $0, $v0
+	li    $v0, 14
+	la	  $a1, Arr
+	li    $a2, 4       #读取四个字节，为n
+	syscall
+	la    $a1, Arr
+	lw    $s1, 0($a1)  #s1=n
+	li    $v0, 14
+	la	  $a1, Arr
+	sll   $a2, $s1, 2
+	syscall			   #读取数组
+	li    $v0, 16  
+	syscall			   #关闭文件
 
-la	  $a0, Arr
-move  $a1, $s1
-jal   printArrToScreen  #调试
+	la	  $a0, Arr
+	move  $a1, $s1
+	jal   printArrToScreen  #调试
 
-la    $a0, Arr
-move  $a1, $s1
-jal   sort         #排序
+	li    $s7, 1
+	beq   $s7, $s1, skipSort  #特殊处理n=1的情况
+	la    $a0, Arr
+	move  $a1, $s1
+	jal   sort         #排序
+skipSort:
 
-la	  $a0, Arr
-move  $a1, $s1
-jal   printArrToScreen  #调试
+	la	  $a0, Arr
+	move  $a1, $s1
+	jal   printArrToScreen  #调试
 
-li    $v0, 13
-la    $a0, outfile
-li	  $a1, 1       #写入
-li	  $a2, 0       #模式，设定为0即可
-syscall
-addu  $a0, $0, $v0
-li    $v0, 15
-la	  $a1, Arr
-sll   $a2, $s1, 2
-syscall
-li    $v0, 16  
-syscall			   #关闭文件
+	li    $v0, 13
+	la    $a0, outfile
+	li	  $a1, 1       #写入
+	li	  $a2, 0       #模式，设定为0即可
+	syscall
+	addu  $a0, $0, $v0
+	li    $v0, 15
+	la	  $a1, Arr
+	sll   $a2, $s1, 2
+	syscall
+	li    $v0, 16  
+	syscall			   #关闭文件
 
-li    $v0, 10
-syscall		       # exit
+	li    $v0, 10
+	syscall		       # exit
 
 
 sort: # a0传入数组基址，a1传入n
-addu  $t0, $0, $a0 # t0为基址
-addu  $t1, $0, $a1 # t1=n
-li    $t2, 0	   # t2=0 作为i
+	addu  $t0, $0, $a0 # t0为基址
+	addu  $t1, $0, $a1 # t1=n
+	li    $t2, 0	   # t2=0 作为i
 loopi:
-sll   $t3, $t1, 2  # t3 初始赋为倒数第二个位置的地址
-addu  $t3, $t3, $t0
-subi  $t3, $t3, 8
+	sll   $t3, $t1, 2  # t3 初始赋为倒数第二个位置的地址
+	addu  $t3, $t3, $t0
+	subi  $t3, $t3, 8
 loopj:
-addu  $a0, $0, $t3 # a0=t3 (当前地址)
+	addu  $a0, $0, $t3 # a0=t3 (当前地址)
 	addu  $s0, $0, $ra # 暂存ra
 	jal   ckswap	   # 调用ckswap进行判断
 	addu  $ra, $0, $s0 # 还原ra
@@ -298,24 +330,24 @@ addu  $a0, $0, $t3 # a0=t3 (当前地址)
 	jr    $ra
 
 
-	ckswap: # a0传入表示可能交换a0和a0+4地址的值 (不满足顺序时交换)
+ckswap: # a0传入表示可能交换a0和a0+4地址的值 (不满足顺序时交换)
 	lw    $t8, 0($a0)
 	lw    $t9, 4($a0)
 	ble   $t8, $t9, exitSwap  #t8<=t9时跳转到exitSwap(即不交换)
 	sw    $t8, 4($a0)
-sw    $t9, 0($a0)
-	exitSwap:
+	sw    $t9, 0($a0)
+exitSwap:
 	jr    $ra
 
-	printArrToScreen:         # a0传入数组基址，a1传入n
+printArrToScreen:         # a0传入数组基址，a1传入n
 	addu  $t6, $0, $a0     # t6存基址
 	addu  $t7, $0, $a1     # t7存n
 	li    $t8, 0          # t8(i)=0
-	loop:
+loop:
 	sll   $t9, $t8, 2
 	addu  $t9, $t9, $t6   # t9赋值为目标地址
 	li    $v0, 1
-lw    $a0, 0($t9) 
+	lw    $a0, 0($t9) 
 	syscall				  # 打印数字
 	li	  $v0, 4
 	la	  $a0, space
@@ -492,6 +524,234 @@ lw    $a0, 0($t9)
 	syscall				  # 打印空格
 	addiu $t8, $t8, 1     # i=i+1
 	blt   $t8, $a1, printLoop  # t8(i)<a1(n)时跳转到printLoop
+	li	  $v0, 4
+	la	  $a0, line		  # 打印换行
+	syscall
+	jr    $ra
+```
+
+### 归并排序
+
+```
+.data
+	num:     .space 4
+	space:   .asciiz " "
+	line:    .asciiz "\n"
+	infile:  .asciiz "/home/yyr/Work/asm/a.in"
+	outfile: .asciiz "/home/yyr/Work/asm/a.out"
+
+.text
+.global main
+
+main:   
+	li    $v0, 13
+	la    $a0, infile
+	li	  $a1, 0       #读取
+	li	  $a2, 0       #模式，设定为0即可
+	syscall
+	move  $s2, $v0     #s2=fd
+	move  $a0, $s2
+	li    $v0, 14
+	la	  $a1, num 
+	li    $a2, 4       #读取四个字节，为n
+	syscall
+	lw    $s1, 0($a1)  #s1=n
+
+	li    $v0, 9
+	li    $a0, 8
+	syscall			   #新建一个结点
+	sw    $0, 4($v0)   #next指针初始为0
+	move  $s3, $v0     #s3存放首指针
+	move  $s4, $s3     #s4存放当前指针
+	
+	li    $v0, 14
+	move  $a0, $s2
+	la    $a1, num
+	li    $a2, 4
+	syscall
+	lw    $s7, 0($a1)  #s7临时存储读入的一个数
+	sw    $s7, 0($s3)  #放入首指针的数据中
+	li    $s5, 2	   #s5存放循环变量i
+
+inputLoop:
+	bgt   $s5, $s1, endInputLoop  #s5(i)>s1(n)时退出循环
+	li    $v0, 9
+	li    $a0, 8
+	syscall			   #新建一个结点
+	sw    $0,  4($v0)  #next指针初始为0
+	sw    $v0, 4($s4)  #上一个位置的next指向当前结点地址
+	move  $s4, $v0     #s4=v0，指向当前位置
+	
+	li    $v0, 14
+	move  $a0, $s2
+	la    $a1, num
+	li    $a2, 4
+	syscall
+	lw    $s7, 0($a1)  #s7临时存储读入的一个数
+	sw    $s7, 0($s4)  #放入当前结点的数据中
+
+	addiu $s5, $s5, 1
+	b     inputLoop
+endInputLoop:
+	move  $a0, $s2     #a0=s2(fd)
+	li    $v0, 16  
+	syscall			   #关闭文件
+
+	move  $a0, $s3
+	jal   printListToScreen  #调试
+
+	move  $a0, $s3
+	jal   sort
+	move  $s3, $v0
+
+	move  $a0, $s3
+	jal   printListToScreen  #调试
+
+	li    $v0, 13
+	la    $a0, outfile
+	li	  $a1, 1       #写入
+	li	  $a2, 0       #模式，设定为0即可
+	syscall
+	move  $s2, $v0     #s2=fd
+	move  $s4, $s3     #s4指向当前位置
+outputLoop:
+	li    $v0, 15
+	move  $a0, $s2
+	move  $a1, $s4
+	li    $a2, 4
+	syscall            #输出当前结点数据
+	lw    $s4, 4($s4)  #s4=s4->next
+	bnez   $s4, outputLoop
+
+	li    $v0, 16  
+	syscall			   #关闭文件
+
+	li    $v0, 10
+	syscall		       # exit
+
+
+merge: # a0传入左链表首地址l_head，a1传入右链表首地址r_head，v0传出合并后链表首地址
+	move  $t8, $a0
+	move  $t9, $a1
+	li    $v0, 9
+	li    $a0, 8
+	syscall			   #新建一个虚拟结点head
+	sw    $t8, 4($v0)  #next指针初始为l_head
+	move  $t0, $v0     #t0作为p_left
+	move  $t1, $t9     #t1作为p_right
+	move  $t2, $v0     #t2作为head
+mergeLoop1:
+mergeLoop2:
+	lw    $t9, 4($t0)  #t9=p_left->next
+	beqz  $t9, endMergeLoop2
+	lw    $t9, 0($t9)  #t9=t9->val
+	lw    $t8, 0($t1)  #t8=p_right->val
+	bgt   $t9, $t8, endMergeLoop2
+	lw    $t0, 4($t0)  #p_left=p_left->next
+	b     mergeLoop2
+endMergeLoop2:
+	lw    $t9, 4($t0)  #t9=p_left->next
+	bnez  $t9, endMergeIf1
+	sw    $t1, 4($t0)  #p_left->next=p_right
+	b     endMergeLoop1 #break
+endMergeIf1:
+	move  $t3, $t1     #t3作为p_right_temp
+mergeLoop3:
+	lw    $t9, 4($t3)  #t9=p_right_temp->next
+	beqz   $t9, endMergeLoop3
+	lw    $t9, 0($t9)  #t9=t9->val
+	lw    $t8, 4($t0)  #t8=p_left->next
+	lw    $t8, 0($t8)  #t8=t8->val
+	bgt   $t9, $t8, endMergeLoop3
+	lw    $t3, 4($t3)  #p_right_temp=p_right_temp->next
+	b     mergeLoop3
+endMergeLoop3:
+	lw    $t4, 4($t3)  #t4作为temp_right_pointer_next
+	lw    $t9, 4($t0)  #t9=p_left->next
+	sw    $t9, 4($t3)  #p_right_temp->next=p_left->next
+	sw    $t1, 4($t0)  #p_left->next=p_right
+	move  $t0, $t3     #p_left=p_right_temp
+	move  $t1, $t4     #p_right=temp_right_pointer_next
+	beqz  $t1, endMergeLoop1  # if(p_right==NULL) break;
+	b     mergeLoop1
+endMergeLoop1:
+	lw    $v0, 4($t2)  #return head->next
+	jr    $ra
+
+
+sort: #传入a0表示首指针head，传回v0表示排序后的首指针
+	move  $t0, $a0     #t0作为head
+	lw    $t9, 4($t0)  #t9=head->next
+	bnez  $t9, endSortIf1
+	move  $v0, $a0
+	jr    $ra		   #return head;
+endSortIf1:
+	move  $t1, $t0     #t1作为stride_1_pointer
+	move  $t2, $t0     #t2作为stride_2_pointer
+sortLoop1:
+	lw    $t9, 4($t2)  #t9=stride_2_pointer->next
+	beqz  $t9, endSortLoop1
+	move  $t2, $t9     #stride_2_pointer=t9
+	lw    $t9, 4($t2)  #t9=stride_2_pointer->next
+	beqz  $t9, endSortLoop1
+	move  $t2, $t9     #stride_2_pointer=t9
+	lw    $t1, 4($t1)  #stride_1_pointer=stride_1_pointer->next
+	b     sortLoop1
+endSortLoop1:
+	lw    $t2, 4($t1)  #stride_2_pointer=stride_1_pointer->next
+	sw    $0,  4($t1)  #stride_1_pointer->next=NULL
+
+	move  $a0, $t0
+	subi  $sp, $sp, 16
+	sw    $t0, 0($sp)
+	sw    $t1, 4($sp)
+	sw    $t2, 8($sp)
+	sw    $ra, 12($sp)
+	jal   sort
+	lw    $ra, 12($sp)
+	lw    $t2, 8($sp)
+	lw    $t1, 4($sp)
+	lw    $t0, 0($sp)
+	addiu $sp, $sp, 16
+	move  $t3, $v0     #t3作为l_head=msort(head);
+
+	move  $a0, $t2
+	subi  $sp, $sp, 20
+	sw    $t0, 0($sp)
+	sw    $t1, 4($sp)
+	sw    $t2, 8($sp)
+	sw    $t3, 12($sp)
+	sw    $ra, 16($sp)
+	jal   sort
+	lw    $ra, 16($sp)
+	lw    $t3, 12($sp)
+	lw    $t2, 8($sp)
+	lw    $t1, 4($sp)
+	lw    $t0, 0($sp)
+	addiu $sp, $sp, 20
+	move  $t4, $v0     #t4作为r_head=msort(stride_2_pointer);
+
+	move  $a0, $t3
+	move  $a1, $t4
+	subi  $sp, $sp, 4
+	sw    $ra, 0($sp)
+	jal   merge
+	lw    $ra, 0($sp)
+	addiu $sp, $sp, 4
+	jr    $ra          #return merge(l_head,r_head);
+
+
+printListToScreen:         # a0传入链表首地址
+	addu  $t6, $0, $a0     # t6存当前地址
+printLoop:
+	li    $v0, 1
+	lw    $a0, 0($t6) 
+	syscall				  # 打印数字
+	li	  $v0, 4
+	la	  $a0, space
+	syscall				  # 打印空格
+	lw    $t6, 4($t6)
+	bnez   $t6, printLoop  # 下一个非空的时候继续循环
 	li	  $v0, 4
 	la	  $a0, line		  # 打印换行
 	syscall
