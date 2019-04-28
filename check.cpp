@@ -21,8 +21,12 @@ int readInt(int &a, FILE* file){
 	return fread(&a, sizeof(int), 1, file) ;
 }
 
-int main(){
+int main(int argc, char *argv[]){
 	srand(time(NULL)+(long long)new int) ;
+	if(argc<2){
+		cout << "Please specify the file name.\n" ;
+		return 0 ;
+	}
 	for(int i=1;i<=1000000;++i){
 		cout << "#" << i << ":" << '\n' ;
 		//生成数据
@@ -37,8 +41,14 @@ int main(){
 
 		//执行并检查
 		system("[ -e ./a.out ] && rm a.out") ;
-		system("java -jar Mars4_5.jar BubbleSort.s > log") ;
+		char inst[105] ;
+		sprintf(inst,"java -jar Mars4_5.jar %s > log",argv[1]) ;
+		system(inst) ;
 		output = fopen(outputName,"rb") ;
+		if(output==NULL){
+			cout << "No output file generated.\n" ;
+			return 0 ;
+		}
 		int a ;
 		sort(A+1,A+n+1) ;
 		for(int i=1;i<=n;++i){
