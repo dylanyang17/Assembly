@@ -27,18 +27,20 @@ int main(){
 		cout << "#" << i << ":" << '\n' ;
 		//生成数据
 		input  = fopen(inputName, "wb") ;
-		int n=rd(5,10) ;
+		int n=rd(5,1000) ;
 		writeInt(n, input) ;
 		for(int i=1;i<=n;++i){
-			A[i]=rd(1,10000) ;
+			A[i]=rd(-10000,10000) ;
 			writeInt(A[i],input) ;
 		}
 		fclose(input) ;
 
 		//执行并检查
+		system("[ -e ./a.out ] && rm a.out") ;
 		system("java -jar Mars4_5.jar BubbleSort.s > log") ;
 		output = fopen(outputName,"rb") ;
 		int a ;
+		sort(A+1,A+n+1) ;
 		for(int i=1;i<=n;++i){
 			if(!readInt(a,output) || a!=A[i]){
 				cout << "Wrong answer!\n" ;
