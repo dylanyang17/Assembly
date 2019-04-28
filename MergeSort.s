@@ -38,7 +38,7 @@ main:
 	li    $s5, 2	   #s5存放循环变量i
 
 inputLoop:
-	bgl   $s5, $s1, endInputLoop  #s5(i)>s1(n)时退出循环
+	bgt   $s5, $s1, endInputLoop  #s5(i)>s1(n)时退出循环
 	li    $v0, 9
 	li    $a0, 8
 	syscall			   #新建一个结点
@@ -78,15 +78,14 @@ endInputLoop:
 	move  $s2, $v0     #s2=fd
 	move  $s4, $s3     #s4指向当前位置
 outputLoop:
-	
-	
-
-
-	move  $a0, $v0
 	li    $v0, 15
-	la	  $a1, Arr
-	sll   $a2, $s1, 2
-	syscall
+	move  $a0, $s2
+	move  $a1, $s4
+	li    $a2, 4
+	syscall            #输出当前结点数据
+	lw    $s4, 4($s4)  #s4=s4->next
+	bnez   $s4, outputLoop
+
 	li    $v0, 16  
 	syscall			   #关闭文件
 
@@ -103,7 +102,7 @@ printLoop:
 	la	  $a0, space
 	syscall				  # 打印空格
 	lw    $t6, 4($t6)
-	bnz   $t6, printLoop  # 下一个非空的时候继续循环
+	bnez   $t6, printLoop  # 下一个非空的时候继续循环
 	li	  $v0, 4
 	la	  $a0, line		  # 打印换行
 	syscall
